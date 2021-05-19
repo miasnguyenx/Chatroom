@@ -91,6 +91,7 @@ int roomid_handler()
 		{
 			printf("%s\n", message);
 			// str_overwrite_stdout();
+			break;
 		}
 		else if (recv(sockfd, message, LENGTH, 0) == 0)
 		{

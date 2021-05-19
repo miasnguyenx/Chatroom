@@ -20,7 +20,7 @@ pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 // int option = 1;
 // int connfd = 0;
 // int listenfd = 0;
-static int uid = 0;
+static int uid = 10;
 int cli_count;
 
 void error(const char *msg)
@@ -111,7 +111,7 @@ void send_message_current_client(char *s, int uid)
         {
             if (clients[i]->uid == uid)
             {
-                if (write(clients[i]->sockfd, s, strlen(s)) < 0)
+                if (write(clients[i]->sockfd, s, LENGTH) < 0)
                 {
                     perror("ERROR: write to descriptor failed");
                     break;
@@ -164,7 +164,7 @@ void *handle_client(void *arg)
         str_trim_lf(opt, strlen(opt));
         opt_int = atoi(opt);
 
-        sprintf(buff_out, "You has selected option %d", atoi(opt));
+        sprintf(buff_out, "You has selected option %d <-- from server", atoi(opt));
         if (opt_int == 1)
             printf("Username: '%s' want to create a room \n", name);
         else
@@ -177,9 +177,8 @@ void *handle_client(void *arg)
 
     char roomid[OPTION_SZ];
     int rid_int;
-    printf("%d \n", receive);
     receive = recv(cli->sockfd, roomid, 100, 0);
-    
+
     if (receive > 0)
     {
         str_trim_lf(roomid, strlen(roomid));
@@ -197,7 +196,7 @@ void *handle_client(void *arg)
             {
                 printf("Client's roomid already exists.\n");
                 fflush(stdout);
-                send_message_current_client("Your entered roomid already exists", cli->uid);
+                send_message_current_client("Your entered roomid already exists <-- from server", cli->uid);
                 leave_flag = 1;
             }
             else
@@ -205,8 +204,8 @@ void *handle_client(void *arg)
                 cli->roomid = rid_int;
                 printf("Created a room number %d for client \n", rid_int);
                 // fflush(stdout);
-                sprintf(buff_out, "You has created a room id %d \n", rid_int);
-                send_message_current_client(buff_out, cli->uid);
+                sprintf(buff_out, "You has created a room id %d <-- from server \n", rid_int);
+                send_message_current_client("You has created a room <-- from server \n", cli->uid);
             }
             // bzero(buff_out, BUFFER_SZ);
             // bzero(roomid, 100);
@@ -215,9 +214,9 @@ void *handle_client(void *arg)
         {
             if (!room_exist(rid_int))
             {
-                printf("Room entered: %d doesn't exist", rid_int);
+                printf("Room entered: %d doesn't exist \n", rid_int);
                 fflush(stdout);
-                send_message_current_client("your entered roomid doesn't exist", cli->uid);
+                send_message_current_client("your entered roomid doesn't exist \n", cli->uid);
             }
             else
             {
@@ -327,17 +326,18 @@ int room_exist(int roomid)
         {
             if (clients[i]->roomid == roomid && roomid != 0)
             {
+                pthread_mutex_unlock(&clients_mutex);
                 return 1;
             }
         }
     }
-    return 0;
-
     pthread_mutex_unlock(&clients_mutex);
+    return 0;
 }
 
 int main(int argc, char **argv)
 {
+    pthread_mutex_init(&clients_mutex, NULL);
     // int roomid;
     // pthread_t tid;
     // char buffer[BUFFER_SZ];
