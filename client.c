@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <netdb.h>
 #include "server.h"
 #include "config.c"
 #include "utility.c"
@@ -61,7 +62,7 @@ int option_handler()
 	{
 		send(sockfd, option, 100, 0);
 	}
-	
+
 	char message[LENGTH] = {};
 	if (recv(sockfd, message, LENGTH, 0))
 	{
@@ -163,20 +164,33 @@ void recv_msg_handler()
 
 int main(int argc, char **argv)
 {
-	if (argc != 2)
+	struct hostent *server;
+	// char *ip = "127.0.0.1";
+	int port = atoi(argv[2]);
+	struct sockaddr_in server_addr;
+	
+	if (argc < 3)
 	{
-		printf("Usage: %s <port>\n", argv[0]);
-		return EXIT_FAILURE;
+		fprintf(stderr, "usage %s hostname port\n", argv[0]);
+		exit(0);
+	}
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	server = gethostbyname(argv[1]);
+	if (server == NULL)
+	{
+		fprintf(stderr, "ERROR, no such host\n");
+		exit(0);
 	}
 
-	char *ip = "127.0.0.1";
-	int port = atoi(argv[1]);
-	struct sockaddr_in server_addr;
-
 	/* Socket settings */
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	bzero((char *)&server_addr, sizeof(server_addr));
+	
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr(ip);
+
+	bcopy((char *)server->h_addr,
+          (char *)&server_addr.sin_addr.s_addr,
+          server->h_length);
+
 	server_addr.sin_port = htons(port);
 
 	// Connect to Server
