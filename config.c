@@ -1,0 +1,5 @@
+#define MAX_CLIENTS 100
+#define BUFFER_SZ 2048
+#define MAX_THREADS 100
+#define LENGTH 2048
+#define OPTION_SZ 100
