@@ -11,11 +11,17 @@
 #include <signal.h>
 typedef struct
 {
+    char host[32];
+    int roomid;
+} room_t;
+
+typedef struct
+{
     struct sockaddr_in address;
+    room_t room;
     int sockfd;
     int uid;
     char name[32];
-    int roomid;
 } client_t;
 
 int room_exist(int roomid);
@@ -35,3 +41,6 @@ void send_message_same_room(char *s, int uid, int roomid);
 void send_message_current_client(char *s, int uid);
 void client_name_handler(void *arg, int *leave_flag);
 void client_room_handler(void *arg, int *leave_flag);
+void room_list_append(int roomid, char *name);
+void room_list_init();
+void send_file(int uid);

@@ -136,6 +136,21 @@ void send_msg_handler()
 	catch_ctrl_c_and_exit(2);
 }
 
+void recv_room_list()
+{
+	char message[LENGTH] = {};
+	sleep(1);
+	if (recv(sockfd, message, LENGTH, 0))
+	{
+		printf("%s", message);
+		// fflush(stdout);
+	}
+
+	//clear message
+	memset(message, 0, sizeof(message));
+	// bzero(message, sizeof(message));
+}
+
 void recv_msg_handler()
 {
 	char message[LENGTH] = {};
@@ -168,7 +183,7 @@ int main(int argc, char **argv)
 	// char *ip = "127.0.0.1";
 	int port = atoi(argv[2]);
 	struct sockaddr_in server_addr;
-	
+
 	if (argc < 3)
 	{
 		fprintf(stderr, "usage %s hostname port\n", argv[0]);
@@ -184,12 +199,12 @@ int main(int argc, char **argv)
 
 	/* Socket settings */
 	bzero((char *)&server_addr, sizeof(server_addr));
-	
+
 	server_addr.sin_family = AF_INET;
 
 	bcopy((char *)server->h_addr,
-          (char *)&server_addr.sin_addr.s_addr,
-          server->h_length);
+		  (char *)&server_addr.sin_addr.s_addr,
+		  server->h_length);
 
 	server_addr.sin_port = htons(port);
 
@@ -203,6 +218,8 @@ int main(int argc, char **argv)
 	//this use for catch ctrl_c then exit
 	signal(SIGINT, catch_ctrl_c_and_exit);
 
+	recv_room_list();
+	printf("--------------------------\n");
 	if (username_handler())
 		return EXIT_FAILURE;
 

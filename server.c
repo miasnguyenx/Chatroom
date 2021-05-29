@@ -15,6 +15,7 @@
 
 client_t *clients[MAX_CLIENTS];
 pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t rooms_mutex = PTHREAD_MUTEX_INITIALIZER;
 // struct sockaddr_in serv_addr;
 // struct sockaddr_in cli_addr;
 // int option = 1;
@@ -22,6 +23,7 @@ pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 // int listenfd = 0;
 static int uid = 10;
 int cli_count;
+char room_list[LENGTH];
 
 void error(const char *msg)
 {
@@ -88,7 +90,9 @@ void send_message_same_room(char *s, int uid, int roomid)
     {
         if (clients[i])
         {
-            if (clients[i]->uid != uid && clients[i]->roomid == roomid && roomid != 0)
+            // client has roomid, which indicated that client has enter the roomid
+            // roomid must different from zero, otherwise clients which haven't completed step one will catch an error
+            if (clients[i]->uid != uid && clients[i]->room.roomid == roomid && roomid != 0)
             {
                 if (write(clients[i]->sockfd, s, strlen(s)) < 0)
                 {
@@ -121,6 +125,29 @@ void send_message_current_client(char *s, int uid)
     }
     pthread_mutex_unlock(&clients_mutex);
 }
+void send_file(int uid)
+{
+    char buffer[LENGTH];
+    FILE *fp = fopen("roomlist.txt", "r");
+    char data[LENGTH];
+    while (fgets(data, LENGTH, fp) != NULL)
+    {
+        strcat(buffer,data);
+    }
+    send_message_current_client(buffer, uid);
+    bzero(data, LENGTH);
+    fclose(fp);
+}
+
+void room_list_append(int roomid, char *name)
+{
+    FILE *fp;
+
+    /* open the file for writing*/
+    fp = fopen("roomlist.txt", "a");
+    fprintf(fp, "-> roomid: %d --- host: %s\n", roomid, name);
+    fclose(fp);
+}
 
 void *handle_client(void *arg)
 {
@@ -130,9 +157,9 @@ void *handle_client(void *arg)
 
     cli_count++;
     char name[32];
-    // char buff_out[BUFFER_SZ];
-    // client_t *cli = (client_t *)arg;
-    // Get the name from message
+    
+    send_file(cli->uid);
+
     if (recv(cli->sockfd, name, 32, 0) <= 0 || strlen(name) < 2 || strlen(name) >= 32 - 1)
     {
         printf("Didn't enter the name or enter an unappropriate name.\n");
@@ -143,8 +170,9 @@ void *handle_client(void *arg)
         strcpy(cli->name, name);
         sprintf(buff_out, "%s has joined \n", cli->name);
         printf("%s", buff_out);
+
         //send_message
-        send_message_same_room(buff_out, cli->uid, cli->roomid);
+        // send_message_same_room(buff_out, cli->uid, cli->room.roomid);
         bzero(buff_out, BUFFER_SZ);
         // bzero(name, 32);
     }
@@ -201,7 +229,8 @@ void *handle_client(void *arg)
             }
             else
             {
-                cli->roomid = rid_int;
+                cli->room.roomid = rid_int;
+                room_list_append(rid_int, name);
                 printf("Created a room number %d for client \n", rid_int);
                 // fflush(stdout);
                 sprintf(buff_out, "You has created a room id %d <-- from server \n", rid_int);
@@ -220,7 +249,7 @@ void *handle_client(void *arg)
             }
             else
             {
-                cli->roomid = rid_int;
+                cli->room.roomid = rid_int;
                 printf("Joined username '%s' to room %d \n", name, rid_int);
                 sprintf(buff_out, "You has joined room %d \n", rid_int);
                 send_message_current_client(buff_out, cli->uid);
@@ -250,7 +279,7 @@ void *handle_client(void *arg)
         {
             if (strlen(buff_out) > 0)
             {
-                send_message_same_room(buff_out, cli->uid, cli->roomid);
+                send_message_same_room(buff_out, cli->uid, cli->room.roomid);
 
                 str_trim_lf(buff_out, strlen(buff_out));
                 printf("%s <-- %s\n", buff_out, cli->name);
@@ -260,7 +289,7 @@ void *handle_client(void *arg)
         {
             sprintf(buff_out, "%s has left\n", cli->name);
             printf("%s", buff_out);
-            send_message_same_room(buff_out, cli->uid, cli->roomid);
+            send_message_same_room(buff_out, cli->uid, cli->room.roomid);
             leave_flag = 1;
         }
         else
@@ -324,7 +353,7 @@ int room_exist(int roomid)
     {
         if (clients[i])
         {
-            if (clients[i]->roomid == roomid && roomid != 0)
+            if (clients[i]->room.roomid == roomid && roomid != 0)
             {
                 pthread_mutex_unlock(&clients_mutex);
                 return 1;
@@ -338,6 +367,10 @@ int room_exist(int roomid)
 int main(int argc, char **argv)
 {
     pthread_mutex_init(&clients_mutex, NULL);
+    pthread_mutex_init(&rooms_mutex, NULL);
+    FILE *fp = fopen("roomlist.txt","w");
+    fprintf(fp, "Current existing rooms: \n");
+    fclose(fp);
     // int roomid;
     // pthread_t tid;
     // char buffer[BUFFER_SZ];
