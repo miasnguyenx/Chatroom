@@ -1,2 +1,3 @@
 Current existing rooms: 
--> roomid: 567 --- host: JACK
+Room ID: 1 hosted by Alex
+Room ID: 2 hosted by Clair

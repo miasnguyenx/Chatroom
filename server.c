@@ -31,55 +31,6 @@ void error(const char *msg)
     exit(1);
 }
 
-// void set_listenfd()
-// {
-//     listenfd = socket(AF_INET, SOCK_STREAM, 0);
-//     if (listenfd < 0)
-//     {
-//         error("ERROR opening socket");
-//     }
-// }
-
-// void server_config(char *portno)
-// {
-//     bzero((char *)&serv_addr, sizeof(serv_addr));
-//     //server config
-//     char *ip = "127.0.0.1";
-//     int port = atoi(portno);
-//     // int option = 1;
-
-//     serv_addr.sin_family = AF_INET;
-//     serv_addr.sin_addr.s_addr = inet_addr(ip);
-//     serv_addr.sin_port = htons(port);
-// }
-
-// void bind_sockfd()
-// {
-//     if (bind(listenfd, (struct sockaddr *)&serv_addr,
-//              sizeof(serv_addr)) < 0)
-//         perror("ERROR on binding");
-// }
-
-// void listen_to_connection()
-// {
-//     //second param is number of connection that can be waiting until finish this one
-//     //supposed maximum number of clients is ten
-//     if (listen(listenfd, 10) < 0)
-//     {
-//         perror("ERROR: Socket listening failed");
-//     }
-// }
-
-// void accept_connection()
-// {
-//     socklen_t clilen = sizeof(cli_addr);
-//     connfd = accept(listenfd, (struct sockaddr *)&cli_addr, &clilen);
-//     if (connfd < 0)
-//     {
-//         perror("ERROR on accepting a connection");
-//     }
-// }
-
 /* ---------- clean ----------- */
 void send_message_same_room(char *s, int uid, int roomid)
 {
@@ -145,7 +96,7 @@ void room_list_append(int roomid, char *name)
 
     /* open the file for writing*/
     fp = fopen("roomlist.txt", "a");
-    fprintf(fp, "-> roomid: %d --- host: %s\n", roomid, name);
+    fprintf(fp, "Room ID: %d hosted by %s\n", roomid, name);
     fclose(fp);
 }
 
@@ -171,10 +122,7 @@ void *handle_client(void *arg)
         sprintf(buff_out, "%s has joined \n", cli->name);
         printf("%s", buff_out);
 
-        //send_message
-        // send_message_same_room(buff_out, cli->uid, cli->room.roomid);
         bzero(buff_out, BUFFER_SZ);
-        // bzero(name, 32);
     }
 
     char opt[OPTION_SZ];
@@ -236,8 +184,6 @@ void *handle_client(void *arg)
                 sprintf(buff_out, "You has created a room id %d <-- from server \n", rid_int);
                 send_message_current_client("You has created a room <-- from server \n", cli->uid);
             }
-            // bzero(buff_out, BUFFER_SZ);
-            // bzero(roomid, 100);
         }
         else if (opt_int == 2)
         {
@@ -254,15 +200,10 @@ void *handle_client(void *arg)
                 sprintf(buff_out, "You has joined room %d \n", rid_int);
                 send_message_current_client(buff_out, cli->uid);
             }
-            // bzero(buff_out, BUFFER_SZ);
-            // bzero(roomid, 100);
         }
     }
     bzero(roomid, 100);
     bzero(buff_out, BUFFER_SZ);
-    // client_name_handler(&cli, &leave_flag);
-    // // client_option_handler(&cli, &leave_flag);
-    // client_room_handler(&cli, &leave_flag);
 
     //each thread will serve the connection from one client only
     //get message from each of clients and send to all of them
@@ -275,7 +216,7 @@ void *handle_client(void *arg)
         //receive and send
         int receive = recv(cli->sockfd, buff_out, BUFFER_SZ, 0);
         //If client enter exit we need to terminate the connection from client side
-        if (receive > 0)
+        if (receive > 0 && strcmp(buff_out, "exit") != 0)
         {
             if (strlen(buff_out) > 0)
             {
@@ -371,35 +312,6 @@ int main(int argc, char **argv)
     FILE *fp = fopen("roomlist.txt","w");
     fprintf(fp, "Current existing rooms: \n");
     fclose(fp);
-    // int roomid;
-    // pthread_t tid;
-    // char buffer[BUFFER_SZ];
-
-    // if (argc != 2)
-    // {
-    //     printf("Usage: %s <port>\n", argv[0]);
-    //     return EXIT_FAILURE;
-    // }
-    // server_config(argv[1]);
-    // set_listenfd();
-
-    // signal(SIGPIPE, SIG_IGN);
-
-    // if (setsockopt(listenfd, SOL_SOCKET, (SO_REUSEPORT | SO_REUSEADDR), (char *)&option, sizeof(option)) < 0)
-    // {
-    //     perror("ERROR: setsockopt failed");
-    //     return EXIT_FAILURE;
-    // }
-
-    // bind_sockfd();
-    // listen_to_connection();
-    // {
-    // if (argc != 2)
-    // {
-    // 	printf("Usage: %s <port>\n", argv[0]);
-    // 	return EXIT_FAILURE;
-    // }
-
     char *ip = "127.0.0.1";
     int port = atoi(argv[1]);
     int option = 1;
@@ -442,7 +354,7 @@ int main(int argc, char **argv)
     while (1)
     {
         //The listenToConnection will block the program until received a signal of connection
-        // accept_connection();
+
         socklen_t clilen = sizeof(cli_addr);
         connfd = accept(listenfd, (struct sockaddr *)&cli_addr, &clilen);
 
@@ -461,7 +373,7 @@ int main(int argc, char **argv)
         cli->address = cli_addr;
         cli->sockfd = connfd;
         cli->uid = uid++;
-        // int tmp = cli->uid;
+
         /* Add client to the queue and fork thread */
         add_client(cli);
         pthread_create(&tid, NULL, &handle_client, (void *)cli);
